@@ -505,17 +505,17 @@ def video_deepdream():
             if params.zoom > 0:
                 current_img = dream_image.zoom(current_img, params.zoom, params.zoom_mode)
 
-def save_output(t, save_img, content_image, iter_name, model_mean, no_num=False):
+def save_output(t, save_img, content_image, iter_name, no_num=False):
     output_filename, file_extension = os.path.splitext(params.output_image)
     if t == params.num_iterations and not no_num:
         filename = output_filename + str(file_extension)
     else:
         filename = str(output_filename) + iter_name + str(file_extension)
-    disp = deprocess(save_img.clone(), params.model_type, model_mean)
+    disp = deprocess(save_img.clone(), params.model_type)
 
     # Maybe perform postprocessing for color-independent style transfer
     if params.original_colors == 1:
-        disp = original_colors(deprocess(content_image.clone(), params.model_type, model_mean), disp)
+        disp = original_colors(deprocess(content_image.clone(), params.model_type), disp)
 
     disp.save(str(filename))
 
@@ -856,10 +856,10 @@ def new_img(input_image, scale_factor=-1, mode='bilinear'):
     return nn.Parameter(img)
 
 def calc_optical_flow(cur_file: str, prv_file: str):
-    cur = cv.imread(cur_file)
-    prv = cv.imread(prv_file)
-    cur_gray = cv.cvtColor(cur, cv.COLOR_BGR2GRAY)
-    prv_gray = cv.cvtColor(prv, cv.COLOR_BGR2GRAY)
+    cur = np.float32(Image.open(cur_file))
+    prv = np.float32(Image.open(prv_file))
+    cur_gray = cv.cvtColor(cur, cv.COLOR_RGB2GRAY)
+    prv_gray = cv.cvtColor(prv, cv.COLOR_RGB2GRAY)
     flow = cv.calcOpticalFlowFarneback(cur_gray,prv_gray,pyr_scale=0.5,levels=3,winsize=15,iterations=3,poly_n=5,poly_sigma=1.2,flags=0,flow=None)
     return flow
 
@@ -869,7 +869,7 @@ def apply_flow(current_img, flow, original_image: str):
     # (c, h, w) -> (h, w, c)
     img = np.transpose(img, (1, 2, 0))
     # get difference between current image and original image
-    orig = cv.imread(original_image)
+    orig = np.float32(Image.open(original_image))
     diff = img - orig
     # apply flow to difference
     diff = cv.remap(diff, flow, None, cv.INTER_LINEAR)
