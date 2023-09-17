@@ -403,12 +403,13 @@ def video_deepdream():
     print_octave_sizes(octave_list)
 
     for idx in range(start_idx, end_idx):
+        print(f'Processing frame {idx} / {end_idx}')
         if idx > start_idx:
             flow = calc_optical_flow(f'{in_dir}/frame{idx}.png', f'{in_dir}/frame{idx-1}.png')
             flow[:, :, 0] += np.arange(w)
             flow[:, :, 1] += np.arange(h)[:, np.newaxis]
-            current_img = apply_flow(current_img, flow, f'{in_dir}/frame{idx-1}.png')
-        for iter in range(1, params.num_iterations+1):
+            current_img = apply_flow(current_img, flow, f'{in_dir}/frame{idx-1}.png', f'{in_dir}/frame{idx}.png')
+        for iter in range(1, 10 if idx == start_idx else params.num_iterations+1):
             for octave, octave_sizes in enumerate(octave_list, 1):
                 net = copy.deepcopy(net_base) if not has_inception else net_base
                 for param in net.parameters():
@@ -472,7 +473,7 @@ def video_deepdream():
 
                     return loss
 
-                optimizer, loopVal = setup_optimizer(img)
+                optimizer, loopVal = setup_optimizer(img, idx)
                 while num_calls[0] <= params.octave_iter:
                     optimizer.step(feval)
 
@@ -596,20 +597,21 @@ def print_channels(dream_losses, layers, print_all_channels=False):
 
 
 # Configure the optimizer
-def setup_optimizer(img):
+def setup_optimizer(img, idx = -1):
+    lr = 1.5 if idx == params.start_idx and params.video_mode else params.learning_rate
     if params.optimizer == 'lbfgs':
         optim_state = {
             'max_iter': params.num_iterations,
             'tolerance_change': -1,
             'tolerance_grad': -1,
-            'lr': params.learning_rate
+            'lr': lr
         }
         if params.lbfgs_num_correction != 100:
             optim_state['history_size'] = params.lbfgs_num_correction
         optimizer = optim.LBFGS([img], **optim_state)
         loopVal = 1
     elif params.optimizer == 'adam':
-        optimizer = optim.Adam([img], lr = params.learning_rate)
+        optimizer = optim.Adam([img], lr)
         loopVal = params.num_iterations - 1
     return optimizer, loopVal
 
@@ -869,21 +871,28 @@ def calc_optical_flow(cur_file: str, prv_file: str):
     flow = cv.calcOpticalFlowFarneback(cur_gray,prv_gray,pyr_scale=0.5,levels=3,winsize=15,iterations=3,poly_n=5,poly_sigma=1.2,flags=0,flow=None)
     return flow
 
-def apply_flow(current_img, flow, original_image: str):
-    # current_img is tensor, so need to convert to numpy array
-    img = current_img.numpy()
+def apply_flow(current_img, flow, prv_img: str, cur_img: str):
+    # current_img is tensor on GPU, need to convert to numpy
+    img = current_img.detach().cpu().numpy()
+    img = np.squeeze(img)
     # (c, h, w) -> (h, w, c)
     img = np.transpose(img, (1, 2, 0))
     # get difference between current image and original image
-    orig = np.float32(Image.open(original_image))
-    diff = img - orig
+    prv = np.float32(Image.open(prv_img))
+    diff = img - prv
     # apply flow to difference
     diff = cv.remap(diff, flow, None, cv.INTER_LINEAR)
-    img = orig + diff
+    cur = np.float32(Image.open(cur_img))
+    img = cur + diff
     np.clip(img, 0, 255, out=img)
     # return back to tensor
     img = np.transpose(img, (2, 0, 1))
+    # unsqueeze to add batch dimension
+    img = np.expand_dims(img, axis=0)
+    # convert to tensor
     img = torch.from_numpy(img)
+    # move back to GPU
+    img = img.to(current_img.device)
     return img
 
 if __name__ == "__main__":
