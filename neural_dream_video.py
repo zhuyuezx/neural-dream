@@ -322,7 +322,7 @@ def video_deepdream():
 
     params.model_type = auto_model_mode(params.model_file) if params.model_type == 'auto' else params.model_type
 
-    content_image = preprocess(params.content_image, params.image_size, params.model_type).type(dtype)
+    content_image = preprocess(f'{in_dir}/frame{start_idx}.png', params.image_size, params.model_type).type(dtype)
     clamp_val = 256 if params.model_type == 'caffe' else 1
     output_start_num = params.output_start_num - 1 if params.output_start_num > 0 else 0
 
@@ -408,7 +408,6 @@ def video_deepdream():
             flow[:, :, 0] += np.arange(w)
             flow[:, :, 1] += np.arange(h)[:, np.newaxis]
             current_img = apply_flow(current_img, flow, f'{in_dir}/frame{idx-1}.png')
-            # update current_img based on flow
         for iter in range(1, params.num_iterations+1):
             for octave, octave_sizes in enumerate(octave_list, 1):
                 net = copy.deepcopy(net_base) if not has_inception else net_base
@@ -471,9 +470,6 @@ def video_deepdream():
 
                     loss.backward()
 
-                    maybe_print_octave_iter(num_calls[0], octave, params.octave_iter, dream_losses)
-                    maybe_save_octave(iter, num_calls[0], octave, img, content_image)
-
                     return loss
 
                 optimizer, loopVal = setup_optimizer(img)
@@ -493,7 +489,7 @@ def video_deepdream():
                     current_img = img.clone()
 
             maybe_print(iter, total_loss[0], total_dream_losses)
-            maybe_save(iter, current_img, content_image, output_start_num, params.leading_zeros)
+            save_video_frame(current_img, content_image, f'{out_dir}/frame{idx}.png')
             total_dream_losses, total_loss = [], [0]
 
             if params.classify > 0:
@@ -504,6 +500,16 @@ def video_deepdream():
                 classify_img(feat)
             if params.zoom > 0:
                 current_img = dream_image.zoom(current_img, params.zoom, params.zoom_mode)
+
+
+def save_video_frame(img, content_image, filename):
+    disp = deprocess(img.clone(), params.model_type)
+
+    # Maybe perform postprocessing for color-independent style transfer
+    if params.original_colors == 1:
+        disp = original_colors(deprocess(content_image.clone(), params.model_type), disp)
+
+    disp.save(str(filename))
 
 def save_output(t, save_img, content_image, iter_name, no_num=False):
     output_filename, file_extension = os.path.splitext(params.output_image)
