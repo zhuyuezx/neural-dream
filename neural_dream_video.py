@@ -27,6 +27,7 @@ parser.add_argument("-start_idx", type=int, default=0)
 parser.add_argument("-end_idx", type=int, default=10)
 parser.add_argument("-in_dir", help="Input directory(for video mode only)", default='frames')
 parser.add_argument("-out_dir", help="Output directory(for video mode only)", default='frames_out')
+parser.add_argument("-start_pic", type=int, default=0)
 
 # Optimization options
 parser.add_argument("-dream_weight", type=float, default=1000)
@@ -322,7 +323,8 @@ def video_deepdream():
 
     params.model_type = auto_model_mode(params.model_file) if params.model_type == 'auto' else params.model_type
 
-    content_image = preprocess(f'{in_dir}/frame{start_idx}.png', params.image_size, params.model_type).type(dtype)
+    start_pic = f'{in_dir}/frame{start_idx}.png' if params.start_pic == 0 else 'start.png'
+    content_image = preprocess(start_pic, params.image_size, params.model_type).type(dtype)
     clamp_val = 256 if params.model_type == 'caffe' else 1
     output_start_num = params.output_start_num - 1 if params.output_start_num > 0 else 0
 
@@ -409,7 +411,7 @@ def video_deepdream():
             flow[:, :, 0] += np.arange(w)
             flow[:, :, 1] += np.arange(h)[:, np.newaxis]
             current_img = apply_flow(current_img, flow, f'{in_dir}/frame{idx-1}.png', f'{in_dir}/frame{idx}.png')
-        for iter in range(1, 10 if idx == start_idx else params.num_iterations+1):
+        for iter in range(1, params.num_iterations+1):
             for octave, octave_sizes in enumerate(octave_list, 1):
                 net = copy.deepcopy(net_base) if not has_inception else net_base
                 for param in net.parameters():
@@ -598,7 +600,7 @@ def print_channels(dream_losses, layers, print_all_channels=False):
 
 # Configure the optimizer
 def setup_optimizer(img, idx = -1):
-    lr = 1.5 if idx == params.start_idx and params.video_mode else params.learning_rate
+    lr = params.learning_rate
     if params.optimizer == 'lbfgs':
         optim_state = {
             'max_iter': params.num_iterations,
