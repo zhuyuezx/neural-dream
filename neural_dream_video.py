@@ -218,7 +218,7 @@ def main():
     for idx in range(start_idx, end_idx):
         print(f'Processing frame {idx} / {end_idx}')
         if idx > start_idx:
-            flow = calc_optical_flow(f'{in_dir}/frame{idx}.png', f'{in_dir}/frame{idx-1}.png')
+            flow = calc_optical_flow(f'{in_dir}/frame{idx-1}.png', f'{in_dir}/frame{idx}.png')
             flow[:, :, 0] += np.arange(w)
             flow[:, :, 1] += np.arange(h)[:, np.newaxis]
             current_img = apply_flow(current_img, flow, f'{in_dir}/frame{idx-1}.png', f'{in_dir}/frame{idx}.png')
@@ -676,7 +676,7 @@ def new_img(input_image, scale_factor=-1, mode='bilinear'):
         img = dream_image.resize_tensor(img, scale_factor, mode)
     return nn.Parameter(img)
 
-def calc_optical_flow(cur_file: str, prv_file: str):
+def calc_optical_flow(prv_file: str, cur_file: str):
     cur = np.float32(Image.open(cur_file))
     prv = np.float32(Image.open(prv_file))
     cur_gray = cv.cvtColor(cur, cv.COLOR_RGB2GRAY)
