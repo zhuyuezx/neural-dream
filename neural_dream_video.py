@@ -13,8 +13,7 @@ import neural_dream.dream_utils as dream_utils
 import neural_dream.loss_layers as dream_loss_layers
 import neural_dream.dream_image as dream_image
 import neural_dream.dream_model as dream_model
-import neural_dream.dream_tile as dream_tile
-from neural_dream.dream_auto import auto_model_mode, auto_mean
+from neural_dream.dream_auto import auto_model_mode
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -22,7 +21,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-content_image", help="Content target image", default='examples/inputs/tubingen.jpg')
 parser.add_argument("-image_size", help="Maximum height / width of generated image", type=int, default=512)
 parser.add_argument("-gpu", help="Zero-indexed ID of the GPU to use; for CPU mode set -gpu = c", default=0)
-parser.add_argument("-video_mode", type=int, choices=[0, 1], default=0)
 parser.add_argument("-start_idx", type=int, default=0)
 parser.add_argument("-end_idx", type=int, default=10)
 parser.add_argument("-in_dir", help="Input directory(for video mode only)", default='frames')
@@ -123,194 +121,7 @@ params = parser.parse_args()
 
 Image.MAX_IMAGE_PIXELS = 1000000000 # Support gigapixel images
 
-
-def classic_deepdream():
-    dtype, multidevice, backward_device = setup_gpu()
-
-    cnn, layerList = loadCaffemodel(params.model_file, params.pooling, params.gpu, params.disable_check, True)
-    has_inception = cnn.has_inception
-    if params.print_layers:
-        print_layers(layerList, params.model_file, has_inception)
-
-    params.model_type = auto_model_mode(params.model_file) if params.model_type == 'auto' else params.model_type
-
-    content_image = preprocess(params.content_image, params.image_size, params.model_type).type(dtype)
-    clamp_val = 256 if params.model_type == 'caffe' else 1
-    output_start_num = params.output_start_num - 1 if params.output_start_num > 0 else 0
-
-    if params.label_file != '':
-        labels = load_label_file(params.label_file)
-        params.channels = channel_ids(labels, params.channels)
-    if params.classify > 0:
-         if not has_inception:
-             params.dream_layers += ',classifier'
-         if params.label_file == '':
-             labels = list(range(0, 1000))
-
-    dream_layers = params.dream_layers.split(',')
-    start_params = (dtype, params.random_transforms, params.jitter, params.tv_weight, params.l2_weight, params.layer_sigma)
-    primary_params = (params.loss_mode, params.dream_weight, params.channels, params.channel_mode)
-    secondary_params = {'channel_capture': params.channel_capture, 'scale': params.lap_scale, 'sigma': params.sigma, \
-    'use_fft': (params.use_fft, params.fft_block), 'r': clamp_val, 'p_mode': params.percent_mode, 'norm_p': params.norm_percent, \
-    'abs_p': params.abs_percent, 'mean_p': params.mean_percent}
-
-    # Set up the network, inserting dream loss modules
-    net_base, dream_losses, tv_losses, l2_losses, lm_layer_names, loss_module_list = dream_model.build_net(cnn, dream_layers, \
-    has_inception, layerList, params.classify, start_params, primary_params, secondary_params)
-
-    if params.classify > 0:
-       classify_img = dream_utils.Classify(labels, params.classify)
-
-    if multidevice and not has_inception:
-        net_base = setup_multi_device(net_base)
-
-    if not has_inception:
-        print_torch(net_base, multidevice)
-
-    # Initialize the image
-    if params.seed >= 0:
-        torch.manual_seed(params.seed)
-        torch.cuda.manual_seed_all(params.seed)
-        torch.backends.cudnn.deterministic=True
-        random.seed(params.seed)
-    if params.init == 'random':
-        base_img = torch.randn_like(content_image).mul(0.001)
-    elif params.init == 'image':
-        base_img = content_image.clone()
-
-    if params.optimizer == 'lbfgs':
-        print("Running optimization with L-BFGS")
-    else:
-        print("Running optimization with ADAM")
-
-    for param in net_base.parameters():
-        param.requires_grad = False
-
-    for i in dream_losses:
-        i.mode = 'capture'
-
-    if params.image_capture_size == -1:
-        net_base(base_img.clone())
-    else:
-        image_capture_size = tuple([int((float(params.image_capture_size) / max(base_img.size()))*x) for x in (base_img.size(2), base_img.size(3))])
-        net_base(dream_image.resize_tensor(base_img.clone(), (image_capture_size)))
-
-    if params.channels != '-1' or params.channel_mode != 'all' and params.channels != '-1':
-        print_channels(dream_losses, dream_layers, params.print_channels)
-    if params.classify > 0:
-       if params.image_capture_size == 0:
-           feat = net_base(base_img.clone())
-       else:
-           feat = net_base(dream_image.resize_tensor(base_img.clone(), (image_capture_size)))
-       classify_img(feat)
-
-    for i in dream_losses:
-        i.mode = 'None'
-
-    current_img = base_img.clone()
-    h, w = current_img.size(2), current_img.size(3)
-    total_dream_losses, total_loss = [], [0]
-
-    octave_list = octave_calc((h,w), params.octave_scale, params.num_octaves, params.octave_mode)
-    print_octave_sizes(octave_list)
-
-    for iter in range(1, params.num_iterations+1):
-        for octave, octave_sizes in enumerate(octave_list, 1):
-            net = copy.deepcopy(net_base) if not has_inception else net_base
-            for param in net.parameters():
-                param.requires_grad = False
-            dream_losses, tv_losses, l2_losses = [], [], []
-            if not has_inception:
-                for i, layer in enumerate(net):
-                    if isinstance(layer, dream_loss_layers.TVLoss):
-                        tv_losses.append(layer)
-                    if isinstance(layer, dream_loss_layers.L2Regularizer):
-                        l2_losses.append(layer)
-                    if 'DreamLoss' in str(type(layer)):
-                        dream_losses.append(layer)
-            elif has_inception:
-                    net, dream_losses, tv_losses, l2_losses = dream_model.renew_net(start_params, net, loss_module_list, lm_layer_names)
-
-            img = new_img(current_img.clone(), octave_sizes)
-
-            net(img)
-            for i in dream_losses:
-                i.mode = 'loss'
-
-            # Maybe normalize dream weight
-            if params.normalize_weights:
-                normalize_weights(dream_losses)
-
-            # Freeze the net_basework in order to prevent
-            # unnecessary gradient calculations
-            for param in net.parameters():
-                param.requires_grad = False
-
-            # Function to evaluate loss and gradient. We run the net_base forward and
-            # backward to get the gradient, and sum up losses from the loss modules.
-            # optim.lbfgs internally handles iteration and calls this function many
-            # times, so we manually count the number of iterations to handle printing
-            # and saving intermediate results.
-            num_calls = [0]
-            def feval():
-                num_calls[0] += 1
-                optimizer.zero_grad()
-                net(img)
-                loss = 0
-
-                for mod in dream_losses:
-                    loss += -mod.loss.to(backward_device)
-                if params.tv_weight > 0:
-                    for mod in tv_losses:
-                        loss += mod.loss.to(backward_device)
-                if params.l2_weight > 0:
-                    for mod in l2_losses:
-                        loss += mod.loss.to(backward_device)
-
-                if params.clamp:
-                        img.clamp(0, clamp_val)
-                if params.adjust_contrast > -1:
-                    img.data = dream_image.adjust_contrast(img, r=clamp_val, p=params.adjust_contrast)
-
-                total_loss[0] += loss.item()
-
-                loss.backward()
-
-                maybe_print_octave_iter(num_calls[0], octave, params.octave_iter, dream_losses)
-                maybe_save_octave(iter, num_calls[0], octave, img, content_image)
-
-                return loss
-
-            optimizer, loopVal = setup_optimizer(img)
-            while num_calls[0] <= params.octave_iter:
-                optimizer.step(feval)
-
-            if octave == 1:
-                for mod in dream_losses:
-                    total_dream_losses.append(mod.loss.item())
-            else:
-                for d_loss, mod in enumerate(dream_losses):
-                    total_dream_losses[d_loss] += mod.loss.item()
-
-            if img.size(2) != h or img.size(3) != w:
-                current_img = dream_image.resize_tensor(img.clone(), (h,w))
-            else:
-                current_img = img.clone()
-
-        maybe_print(iter, total_loss[0], total_dream_losses)
-        maybe_save(iter, current_img, content_image, output_start_num, params.leading_zeros)
-        total_dream_losses, total_loss = [], [0]
-
-        if params.classify > 0:
-            if params.image_capture_size == 0:
-                feat = net_base(current_img.clone())
-            else:
-                feat = net_base(dream_image.resize_tensor(current_img.clone(), (image_capture_size)))
-            classify_img(feat)
-        if params.zoom > 0:
-            current_img = dream_image.zoom(current_img, params.zoom, params.zoom_mode)
-
-def video_deepdream():
+def main():
     dtype, multidevice, backward_device = setup_gpu()
 
     start_idx, end_idx = params.start_idx, params.end_idx
@@ -898,8 +709,4 @@ def apply_flow(current_img, flow, prv_img: str, cur_img: str):
     return img
 
 if __name__ == "__main__":
-    video_mode = params.video_mode
-    if video_mode:
-        video_deepdream()
-    else:
-        classic_deepdream()
+    main()
