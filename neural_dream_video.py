@@ -691,11 +691,11 @@ def apply_flow(current_img, flow, prv_img: str, cur_img: str):
     # (c, h, w) -> (h, w, c)
     img = np.transpose(img, (1, 2, 0))
     # get difference between current image and original image
-    prv = np.float32(Image.open(prv_img))
+    prv = np.float32(cv.imread(prv_img))
     diff = img - prv
     # apply flow to difference
     diff = cv.remap(diff, flow, None, cv.INTER_LINEAR)
-    cur = np.float32(Image.open(cur_img))
+    cur = np.float32(cv.imread(cur_img))
     img = cur + diff
     np.clip(img, 0, 255, out=img)
     # return back to tensor
