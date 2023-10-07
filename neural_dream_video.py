@@ -37,6 +37,7 @@ parser.add_argument("-just_extract", help="If you want to only extract frames", 
 parser.add_argument("-fps", help="FPS of output video", type=int, default=30)
 parser.add_argument("-output_format", help="Output video format", type=str, default='MP4V')
 parser.add_argument("-output_size", help="Output video size (image_size as default)", type=int, default=-1)
+parser.add_argument("-skip_merging", help="Skip merging frames into video", type=int, default=0)
 
 # Optimization options
 parser.add_argument("-dream_weight", type=float, default=1000)
@@ -154,7 +155,7 @@ def main():
         return
     output_path = os.path.dirname(output_video)
     os.makedirs(output_path, exist_ok=True)
-    
+
     vidcap = cv.VideoCapture(input_video)
     success, image = vidcap.read()
     target_size = params.image_size
@@ -340,7 +341,25 @@ def main():
 
             if params.zoom > 0:
                 current_img = dream_image.zoom(current_img, params.zoom, params.zoom_mode)
+    
+    if params.skip_merging:
+        return 
+    
+    merge_frames(out_dir, start_idx, end_idx)
 
+
+def merge_frames(out_dir, start_idx, end_idx):
+    output_video = params.output_video
+    fps, vid_format = params.fps, params.output_format
+    output_size = params.image_size if params.output_size == -1 else params.output_size
+
+    vidout = cv.VideoWriter(output_video, cv.VideoWriter_fourcc(*vid_format), fps, (output_size, output_size * 9 // 16))
+    for cur_idx in range(start_idx, end_idx + 1):
+        cur_img = cv.imread(f'{out_dir}/frame{cur_idx}.png')
+        print(f'Merging frame {cur_idx} [{start_idx} ~ {end_idx}]')
+        vidout.write(cur_img)
+    vidout.release()
+    print(f'Output video saved at {output_video}')
 
 def save_video_frame(img, content_image, filename):
     disp = deprocess(img.clone(), params.model_type)
