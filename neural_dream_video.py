@@ -170,6 +170,7 @@ def main():
         success, image = vidcap.read()
         print(f'Now at frame {count}, {success}')
         count += 1
+    end_idx = max(count - 1, end_idx)
     print(f'Finished capturing frames in {input_video} from {start_idx} to {end_idx}')
 
     if params.just_extract:
