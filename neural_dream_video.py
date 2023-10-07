@@ -162,6 +162,7 @@ def main():
         print(f'Now at frame {count}, {success}')
         count += 1
     print(f'Finished capturing frames in {input_video} from {start_idx} to {end_idx}')
+    
     if params.just_extract:
         return
     
