@@ -19,13 +19,17 @@ import argparse
 parser = argparse.ArgumentParser()
 # Basic options
 parser.add_argument("-content_image", help="Content target image", default='examples/inputs/tubingen.jpg')
-parser.add_argument("-image_size", help="Maximum height / width of generated image", type=int, default=512)
+parser.add_argument("-image_size", help="Maximum height / width of generated image", type=int, default=960)
 parser.add_argument("-gpu", help="Zero-indexed ID of the GPU to use; for CPU mode set -gpu = c", default=0)
-parser.add_argument("-start_idx", type=int, default=0)
-parser.add_argument("-end_idx", type=int, default=10)
-parser.add_argument("-in_dir", help="Input directory(for video mode only)", default='frames')
-parser.add_argument("-out_dir", help="Output directory(for video mode only)", default='frames_out')
-parser.add_argument("-start_pic", type=int, default=0)
+parser.add_argument("-input_video", help="Path to input video", type=str, default='videos/balcony_view.mp4')
+
+# Optional params for video processing
+parser.add_argument("-in_dir", help="Directory for storing input frames", default='frames') 
+parser.add_argument("-out_dir", help="Directory for storing output frames", default='frames_out')
+parser.add_argument("-start_idx", help="Start processing at start_idx(inclusive)", type=int, default=-1)
+parser.add_argument("-end_idx", help="End processing at end_idx(inclusive)", type=int, default=-1)
+parser.add_argument("-predefined_start", help="Start with the image './start.png' as first frame", type=int, default=0)
+parser.add_argument("-frame_limit", help="Upper bound for number of frames to process", type=int, default=10**4)
 
 # Optimization options
 parser.add_argument("-dream_weight", type=float, default=1000)
@@ -118,9 +122,45 @@ Image.MAX_IMAGE_PIXELS = 1000000000 # Support gigapixel images
 def main():
     dtype, multidevice, backward_device = setup_gpu()
 
-    start_idx, end_idx = params.start_idx, params.end_idx
     in_dir, out_dir = params.in_dir, params.out_dir
+    print(f'Input frames will be stored at {in_dir}')
+    print(f'Output frames will be stored at {out_dir}')
+    # mkdir if not exists
+    if not os.path.exists(in_dir):
+        os.makedirs(in_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    
+    start_idx = 0 if params.start_idx == -1 else params.start_idx
+    end_idx = params.frame_limit if params.end_idx == -1 else params.end_idx
+    try:
+        assert start_idx <= end_idx, 'start_idx must be less than or equal to end_idx'
+    except AssertionError as error:
+        print(error)
+        return
 
+    input_video = params.input_video
+    try:
+        assert os.path.exists(input_video), f'input_video {input_video} does not exist'
+    except AssertionError as error:
+        print(error)
+        return
+    
+    vidcap = cv.VideoCapture(input_video)
+    success, image = vidcap.read()
+    target_size = params.image_size
+    count = 0
+
+    print(f'Capturing frames in {input_video} from {start_idx} to {end_idx}')
+    while success and count <= end_idx:
+        if start_idx <= count:
+            image = cv.resize(image, (target_size, target_size * 9 // 16))
+            # save frame as PNG file
+            cv.imwrite(f'{in_dir}/frame{count}.png', image)   
+        success, image = vidcap.read()
+        print(f'Now at frame {count}, {success}')
+        count += 1
+    
     cnn, layerList = loadCaffemodel(params.model_file, params.pooling, params.gpu, params.disable_check, True)
     has_inception = cnn.has_inception
     if params.print_layers:
@@ -128,8 +168,8 @@ def main():
 
     params.model_type = auto_model_mode(params.model_file) if params.model_type == 'auto' else params.model_type
 
-    start_pic = f'{in_dir}/frame{start_idx}.png' if params.start_pic == 0 else 'start.png'
-    content_image = preprocess(start_pic, params.image_size, params.model_type).type(dtype)
+    start_img = f'{in_dir}/frame{start_idx}.png' if params.predefined_start == 0 else 'start.png'
+    content_image = preprocess(start_img, params.image_size, params.model_type).type(dtype)
     clamp_val = 256 if params.model_type == 'caffe' else 1
 
     if params.label_file != '':
@@ -194,8 +234,8 @@ def main():
     octave_list = octave_calc((h,w), params.octave_scale, params.num_octaves, params.octave_mode)
     print_octave_sizes(octave_list)
 
-    for idx in range(start_idx, end_idx):
-        print(f'Processing frame {idx} / {end_idx}')
+    for idx in range(start_idx, end_idx + 1):
+        print(f'Processing frame {idx} [{start_idx} ~ {end_idx}]')
         if idx > start_idx:
             flow = calc_optical_flow(f'{in_dir}/frame{idx-1}.png', f'{in_dir}/frame{idx}.png')
             flow[:, :, 0] += np.arange(w)
