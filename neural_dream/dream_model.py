@@ -117,9 +117,6 @@ def build_net(cnn, dream_layers, has_inception, layerList, use_classify, start_p
                         next_dream_idx += 1
                     d+=1
 
-                if use_classify > 0 and l == len(layerList['L']):
-                    next_dream_idx += 1
-
     elif has_inception:
         start_net, tv_losses, l2_losses = start_network(start_params)
         lm_layer_names, loss_module_list = [], []

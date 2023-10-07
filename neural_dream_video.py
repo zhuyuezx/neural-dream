@@ -46,7 +46,6 @@ parser.add_argument("-print_octave_iter", type=int, default=0)
 parser.add_argument("-save_iter", type=int, default=1)
 parser.add_argument("-save_octave_iter", type=int, default=0)
 parser.add_argument("-output_image", default='out.png')
-parser.add_argument("-output_start_num", type=int, default=1)
 
 # Octave options
 parser.add_argument("-num_octaves", type=int, default=2)
@@ -83,10 +82,6 @@ parser.add_argument("-disable_roll", action='store_true')
 parser.add_argument("-print_tile_iter", type=int, default=0)
 parser.add_argument("-image_capture_size", help="Image size for initial capture, and classification", type=int, default=512)
 
-# Gif options
-parser.add_argument("-create_gif", action='store_true')
-parser.add_argument("-frame_duration", type=int, default=100)
-
 # Other options
 parser.add_argument("-original_colors", type=int, choices=[0, 1], default=0)
 parser.add_argument("-pooling", choices=['avg', 'max'], default='max')
@@ -101,7 +96,6 @@ parser.add_argument("-seed", type=int, default=-1)
 parser.add_argument("-clamp", action='store_true')
 parser.add_argument("-random_transforms", choices=['none', 'all', 'flip', 'rotate'], default='none')
 parser.add_argument("-adjust_contrast", type=float, help="try 99.98", default=-1)
-parser.add_argument("-classify", type=int, default=0)
 
 parser.add_argument("-dream_layers", help="layers for DeepDream", default='inception_4d_3x3_reduce')
 
@@ -137,16 +131,10 @@ def main():
     start_pic = f'{in_dir}/frame{start_idx}.png' if params.start_pic == 0 else 'start.png'
     content_image = preprocess(start_pic, params.image_size, params.model_type).type(dtype)
     clamp_val = 256 if params.model_type == 'caffe' else 1
-    output_start_num = params.output_start_num - 1 if params.output_start_num > 0 else 0
 
     if params.label_file != '':
         labels = load_label_file(params.label_file)
         params.channels = channel_ids(labels, params.channels)
-    if params.classify > 0:
-         if not has_inception:
-             params.dream_layers += ',classifier'
-         if params.label_file == '':
-             labels = list(range(0, 1000))
 
     dream_layers = params.dream_layers.split(',')
     start_params = (dtype, params.random_transforms, params.jitter, params.tv_weight, params.l2_weight, params.layer_sigma)
@@ -157,10 +145,7 @@ def main():
 
     # Set up the network, inserting dream loss modules
     net_base, dream_losses, tv_losses, l2_losses, lm_layer_names, loss_module_list = dream_model.build_net(cnn, dream_layers, \
-    has_inception, layerList, params.classify, start_params, primary_params, secondary_params)
-
-    if params.classify > 0:
-       classify_img = dream_utils.Classify(labels, params.classify)
+    has_inception, layerList, -1, start_params, primary_params, secondary_params)
 
     if multidevice and not has_inception:
         net_base = setup_multi_device(net_base)
@@ -198,12 +183,6 @@ def main():
 
     if params.channels != '-1' or params.channel_mode != 'all' and params.channels != '-1':
         print_channels(dream_losses, dream_layers, params.print_channels)
-    if params.classify > 0:
-       if params.image_capture_size == 0:
-           feat = net_base(base_img.clone())
-       else:
-           feat = net_base(dream_image.resize_tensor(base_img.clone(), (image_capture_size)))
-       classify_img(feat)
 
     for i in dream_losses:
         i.mode = 'None'
@@ -306,12 +285,6 @@ def main():
             save_video_frame(current_img, content_image, f'{out_dir}/frame{idx}.png')
             total_dream_losses, total_loss = [], [0]
 
-            if params.classify > 0:
-                if params.image_capture_size == 0:
-                    feat = net_base(current_img.clone())
-                else:
-                    feat = net_base(dream_image.resize_tensor(current_img.clone(), (image_capture_size)))
-                classify_img(feat)
             if params.zoom > 0:
                 current_img = dream_image.zoom(current_img, params.zoom, params.zoom_mode)
 
@@ -338,9 +311,6 @@ def save_output(t, save_img, content_image, iter_name, no_num=False):
         disp = original_colors(deprocess(content_image.clone(), params.model_type), disp)
 
     disp.save(str(filename))
-
-    if t == params.num_iterations and params.create_gif:
-        dream_image.create_gif(output_filename, params.frame_duration)
 
 
 def maybe_save(t, save_img, content_image, start_num, leading_zeros):
