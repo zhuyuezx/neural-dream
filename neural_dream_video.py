@@ -22,6 +22,7 @@ parser.add_argument("-content_image", help="Content target image", default='exam
 parser.add_argument("-image_size", help="Maximum height / width of generated image", type=int, default=960)
 parser.add_argument("-gpu", help="Zero-indexed ID of the GPU to use; for CPU mode set -gpu = c", default=0)
 parser.add_argument("-input_video", help="Path to input video", type=str, default='videos/balcony_view.mp4')
+parser.add_argument("-output_video", help="Path to output video", type=str, default='videos_out/balcony_view_out.mp4')
 
 # Optional params for video frames extraction
 parser.add_argument("-in_dir", help="Directory for storing input frames", default='frames') 
@@ -31,6 +32,11 @@ parser.add_argument("-end_idx", help="End processing at end_idx(inclusive)", typ
 parser.add_argument("-predefined_start", help="Start with the image './start.png' as first frame", type=int, default=0)
 parser.add_argument("-frame_limit", help="Upper bound for number of frames to process", type=int, default=10**4)
 parser.add_argument("-just_extract", help="If you want to only extract frames", type=int, default=0)
+
+# Optional params for merging frames into video
+parser.add_argument("-fps", help="FPS of output video", type=int, default=30)
+parser.add_argument("-output_format", help="Output video format", type=str, default='MP4V')
+parser.add_argument("-output_size", help="Output video size (image_size as default)", type=int, default=-1)
 
 # Optimization options
 parser.add_argument("-dream_weight", type=float, default=1000)
@@ -140,12 +146,14 @@ def main():
         print(error)
         return
 
-    input_video = params.input_video
+    input_video, output_video = params.input_video, params.output_video
     try:
         assert os.path.exists(input_video), f'input_video {input_video} does not exist'
     except AssertionError as error:
         print(error)
         return
+    output_path = os.path.dirname(output_video)
+    os.makedirs(output_path, exist_ok=True)
     
     vidcap = cv.VideoCapture(input_video)
     success, image = vidcap.read()
@@ -162,7 +170,7 @@ def main():
         print(f'Now at frame {count}, {success}')
         count += 1
     print(f'Finished capturing frames in {input_video} from {start_idx} to {end_idx}')
-    
+
     if params.just_extract:
         return
     
