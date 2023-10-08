@@ -56,14 +56,14 @@ Those you may use frequently:
 - `num_octaves` : Number of octaves with 2 as default, and please adjust according to your `image_size` in case it's too big
 - `learning_rate` : Learning rate of gradient ascent, default is 1.5, larger value will result in stronger deep-dream effect
 - `num_iterations` : Number of iterations for each octave, default is 10, while larger value results in stronger deep-dream effect
-- `dream_layers` : comma separated layer names to apply deep-dream, with `inception_4d/3x3_reduce` as default, and you can add more layers to focus on different layers (please refer to `models/googlenet/bvlc_googlenet.py` for all layer names)
+- `dream_layers` : comma separated layer names to apply deep-dream, with `inception_4d/3x3_reduce` as default, and you can add more layers to focus on different layers (please refer to `models/googlenet/bvlc_googlenet.py` for all layer names if you are using googlenet)
   
 Those you may use occasionally:
 - `in_dir` & `out_dir` : Directories for storing extracted frames and output frames, default is `frames_in` and `frames_out` (will be created automatically if not exist)
 - `start_idx` & `end_idx` : Start and end index of frames to be extracted from input video to apply neural dream, default is `[first frame ~ last frame]`
 - `save_iter` : Save output video every `save_iter` frames, default is 0 (only save the last frame)
 - `predefined_start` : Start with image `start.png` instead of the first frame of input video, default is 0. You can also use this in case there's interruption in the middle of the process, then use the last saved frame as `start.png` and set `predefined_start` to the index of the last saved frame
-- `channels` : Focus only on indicated channel(s) inside `dream_layers`, indicate multiple channels using comma separated value. In default, all channels will be targed
+- `channels` : Focus only on indicated channel(s) inside `dream_layers`, indicate multiple channels using comma separated value. In default, all channels will be targed (please refer to `models/googlenet/bvlc_googlenet.py` for all channel names if you are using googlenet)
 - `just_extract` : Only extract frames from input video, and skip neural dream process, default is 0
 - `skip_merging` : Extract frames and apply neural dream, but skip merging frames into output video, default is 0
 
