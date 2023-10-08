@@ -18,7 +18,6 @@ from neural_dream.dream_auto import auto_model_mode
 import argparse
 parser = argparse.ArgumentParser()
 # Basic options
-parser.add_argument("-content_image", help="Content target image", default='examples/inputs/tubingen.jpg')
 parser.add_argument("-image_size", help="Maximum height / width of generated image", type=int, default=960)
 parser.add_argument("-gpu", help="Zero-indexed ID of the GPU to use; for CPU mode set -gpu = c", default=0)
 parser.add_argument("-input_video", help="Path to input video", type=str, default='videos/balcony_view.mp4')
@@ -46,7 +45,6 @@ parser.add_argument("-tv_weight", type=float, default=0)
 parser.add_argument("-l2_weight", type=float, default=0)
 parser.add_argument("-num_iterations", type=int, default=10)
 parser.add_argument("-jitter", type=int, default=32)
-parser.add_argument("-init", choices=['random', 'image'], default='image')
 parser.add_argument("-optimizer", choices=['lbfgs', 'adam'], default='adam')
 parser.add_argument("-learning_rate", type=float, default=1.5)
 parser.add_argument("-lbfgs_num_correction", type=int, default=100)
@@ -214,10 +212,7 @@ def main():
         torch.cuda.manual_seed_all(params.seed)
         torch.backends.cudnn.deterministic=True
         random.seed(params.seed)
-    if params.init == 'random':
-        base_img = torch.randn_like(content_image).mul(0.001)
-    elif params.init == 'image':
-        base_img = content_image.clone()
+    base_img = content_image.clone()
 
     if params.optimizer == 'lbfgs':
         print("Running optimization with L-BFGS")
