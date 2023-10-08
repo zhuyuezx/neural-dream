@@ -34,7 +34,7 @@ parser.add_argument("-just_extract", help="If you want to only extract frames", 
 
 # Optional params for merging frames into video
 parser.add_argument("-fps", help="FPS of output video", type=int, default=30)
-parser.add_argument("-output_format", help="Output video format", type=str, default='MP4V')
+parser.add_argument("-output_format", help="Output video format", type=str, default='mp4v')
 parser.add_argument("-output_size", help="Output video size (image_size as default)", type=int, default=-1)
 parser.add_argument("-skip_merging", help="Skip merging frames into video", type=int, default=0)
 
