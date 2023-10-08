@@ -39,3 +39,6 @@ python neural_dream_video.py \
     -num_iterations 1
 ```
 And here is the result:
+
+https://github.com/zhuyuezx/neural-dream/assets/56620120/60d3adaf-a6ec-4894-86b1-42720bd8858a
+
