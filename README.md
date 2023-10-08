@@ -13,7 +13,7 @@ This repo is mostly compatible with the original repo, so please refer to [READM
 
 https://github.com/zhuyuezx/neural-dream/assets/56620120/0d816ffa-4aae-4a46-b002-ca6b61b0d52a
 
-**Video Output:**
+**Video Output(lr = 0.25):**
 
 https://github.com/zhuyuezx/neural-dream/assets/56620120/f9b5ba7e-44df-484f-b0c6-a2acdfacc2f8
 
@@ -38,20 +38,31 @@ python neural_dream_video.py \
     -learning_rate 1.5 \
     -num_iterations 1
 ```
-And here is the result:
+And here is the result (stronger deep-dream effect as learning rate is 1.5):
 
 https://github.com/zhuyuezx/neural-dream/assets/56620120/60d3adaf-a6ec-4894-86b1-42720bd8858a
 
 ## Essential Parameters Explanation
 
 Those you should indicate in every run:
-- input_video
-- output_video
-- gpu & backend
+- `input_video`
+- `output_video`
+- `gpu` & `backend`
 
 Those you may use frequently:
-- image_size
-- num_octaves
-- learning_rate
-- num_iterations
-- dream_layers
+- `image_size`
+- `num_octaves`
+- `learning_rate`
+- `num_iterations`
+- `dream_layers`
+  
+Those you may use occasionally:
+- `in_dir` & `out_dir`
+- `start_idx` & `end_idx`
+- `save_iter`
+- `predefined_start`
+- `channels` & `chennel_mode`
+- `just_extract`
+- `skip_merging`
+
+For many unmentioned parameters, please refer to [original README](https://github.com/ProGamerGov/neural-dream/blob/master/README.md#usage).
