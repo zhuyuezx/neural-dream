@@ -55,7 +55,7 @@ parser.add_argument("-loss_mode", choices=['bce', 'mse', 'mean', 'norm', 'l2', '
 # Output options
 parser.add_argument("-print_iter", type=int, default=1)
 parser.add_argument("-print_octave_iter", type=int, default=0)
-parser.add_argument("-save_iter", type=int, default=1)
+parser.add_argument("-save_iter", type=int, default=0)
 parser.add_argument("-save_octave_iter", type=int, default=0)
 parser.add_argument("-output_image", default='out.png')
 
