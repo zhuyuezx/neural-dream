@@ -10,7 +10,10 @@ This repo is mostly compatible with the original repo, so please refer to [READM
 ## Example of Transformation
 
 **Video Input:**
-<video src="https://github.com/zhuyuezx/neural-dream/raw/master/videos/roadside.mp4" controls="controls">
+
+https://github.com/zhuyuezx/neural-dream/assets/56620120/0d816ffa-4aae-4a46-b002-ca6b61b0d52a
 
 **Video Output:**
-<video src="https://github.com/zhuyuezx/neural-dream/raw/master/videos_out/roadside_out.mp4" controls="controls">
+
+https://github.com/zhuyuezx/neural-dream/assets/56620120/f9b5ba7e-44df-484f-b0c6-a2acdfacc2f8
+
