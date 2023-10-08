@@ -25,7 +25,7 @@ https://github.com/zhuyuezx/neural-dream/assets/56620120/f9b5ba7e-44df-484f-b0c6
 
 ## Usage
 
-**To make things light-weighted, you can refer to this [ipython notebook](https://colab.research.google.com/drive/1cGsbUHWECPCAjSV7_mKuS3t7IWC7kHSf?usp=sharing) to run code on Google Colab without the need of installing any dependencies. Feel free to add your own code snippets and play with the parameters!**
+**To make things light-weighted, you can refer to  [google_colab_demo.ipynb](https://colab.research.google.com/drive/1cGsbUHWECPCAjSV7_mKuS3t7IWC7kHSf?usp=sharing) to run code on Google Colab without the need of installing any dependencies. Feel free to add your own code snippets and play with the parameters!**
 
 And here is the a basic example of the python command, and according to the parameter defaults, it will generate a full-length video with 960x540 resolution using `videos/balcony_view.mp4` as input, and save the output video to `videos_out/balcony_view_out.mp4`:
 ```
@@ -42,3 +42,16 @@ And here is the result:
 
 https://github.com/zhuyuezx/neural-dream/assets/56620120/60d3adaf-a6ec-4894-86b1-42720bd8858a
 
+## Essential Parameters Explanation
+
+Those you should indicate in every run:
+- input_video
+- output_video
+- gpu & backend
+
+Those you may use frequently:
+- image_size
+- num_octaves
+- learning_rate
+- num_iterations
+- dream_layers
