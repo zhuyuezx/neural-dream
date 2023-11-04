@@ -7,6 +7,10 @@ This repo is mostly compatible with the original repo, so please refer to [READM
 - Parameter explanation
 - FAQs
 
+## Introduction Video on Youtube
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/UPPRE8dryVU?si=TYhANhEI5_ra5lJd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 ## Example of Transformation
 
 **Video Input:**
