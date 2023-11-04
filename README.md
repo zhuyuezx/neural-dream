@@ -9,7 +9,8 @@ This repo is mostly compatible with the original repo, so please refer to [READM
 
 ## Introduction Video on Youtube
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/UPPRE8dryVU?si=TYhANhEI5_ra5lJd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- https://www.youtube.com/watch?v=UPPRE8dryVU -->
+[![Neural Dream Video](https://img.youtube.com/vi/UPPRE8dryVU/0.jpg)](https://www.youtube.com/watch?v=UPPRE8dryVU)
 
 ## Example of Transformation
 
